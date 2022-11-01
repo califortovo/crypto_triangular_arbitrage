@@ -6,9 +6,18 @@
 import ccxt
 import pandas as pd
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+
+import psycopg2
 from config import myconfig
 import math
+
+from psycopg2 import sql
+
+# https://khashtamov.com/ru/postgresql-python-psycopg2/
+conn = psycopg2.connect(dbname='cryptotrading', user='postgres',
+                        password='379245chs37', host='localhost')
+cursor = conn.cursor()
 
 # INITIALIZE
 
@@ -197,8 +206,21 @@ def perform_triangular_arbitrage(scrip1, scrip2, scrip3, arbitrage_type, initial
     profit_loss = check_profit_loss(final_price, initial_investment, transaction_brokerage, min_profit)
 
     if profit_loss > 0:
-        print(f"PROFIT-{datetime.now().strftime('%H:%M:%S')}:" \
+        time_utc = datetime.now().replace(tzinfo=timezone.utc)
+        time_local = datetime.now()
+
+        print(f"PROFIT-{time_local.strftime('%H:%M:%S')}:" \
               f"{arbitrage_type}, {scrip1},{scrip2},{scrip3}, Profit/Loss: {round(final_price - initial_investment, 3)} ")
+        with conn.cursor() as cursor:
+            conn.autocommit = True
+            values = [
+                (time_utc, arbitrage_type, round(final_price - initial_investment, 3))
+            ]
+            insert = sql.SQL(
+                'INSERT INTO triangular_arbitrage_signals (timestamp, arbitrage_type, profit_loss)'
+                'VALUES {}').format(sql.SQL(',').join(map(sql.Literal, values))
+                                    )
+            cursor.execute(insert)
 
         # UNCOMMENT THIS LINE TO PLACE THE ORDERS
         # place_trade_orders(arbitrage_type, scrip1, scrip2, scrip3, initial_investment, scrip_pri
