@@ -206,15 +206,14 @@ def perform_triangular_arbitrage(scrip1, scrip2, scrip3, arbitrage_type, initial
     profit_loss = check_profit_loss(final_price, initial_investment, transaction_brokerage, min_profit)
 
     if profit_loss > 0:
-        time_utc = datetime.now().replace(tzinfo=timezone.utc)
-        time_local = datetime.now()
+        time = datetime.now()
 
         print(f"PROFIT-{time_local.strftime('%H:%M:%S')}:" \
               f"{arbitrage_type}, {scrip1},{scrip2},{scrip3}, Profit/Loss: {round(final_price - initial_investment, 3)} ")
         with conn.cursor() as cursor:
             conn.autocommit = True
             values = [
-                (time_utc, arbitrage_type, round(final_price - initial_investment, 3))
+                (time, arbitrage_type, round(final_price - initial_investment, 3))
             ]
             insert = sql.SQL(
                 'INSERT INTO triangular_arbitrage_signals (timestamp, arbitrage_type, profit_loss)'
